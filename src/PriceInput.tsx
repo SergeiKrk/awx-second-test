@@ -60,10 +60,7 @@ const PriceInput: React.FC<PriceInputProps> = ({
           step={step}
           style={{ width: `${inputWidth}px` }} // Устанавливаем ширину input
         />
-        {currency === "RUB" && <span className="divider"></span>}
-        <span className={`currency${currency === "USDT" ? "-two" : ""}`}>
-          {currency}
-        </span>
+        <span className="currency-two">{currency}</span>
       </div>
     </div>
   );
