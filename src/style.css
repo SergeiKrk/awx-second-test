@@ -1,0 +1,238 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap");
+
+body {
+  min-width: 320px;
+  font-family: "Inter";
+  margin: 0;
+  padding: 4px 24px 0 24px;
+  background-color: #fff;
+}
+input {
+  border: none;
+  height: 42.7px;
+  font-size: 42px;
+  line-height: 50.4px;
+  font-family: "Inter", sans-serif;
+  caret-color: #161616;
+}
+input:focus {
+  outline: none;
+  border: none;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+.container {
+  display: flex;
+  flex-direction: column;
+}
+.contain {
+  width: 100%;
+  max-width: 1200px;
+  /* height: 106px; */
+  border-bottom-width: 1px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  gap: 8px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.ml-5 {
+  margin-left: 0;
+}
+.mr-5 {
+  margin-right: 0;
+}
+.field-block {
+  height: 58px;
+  justify-content: space-between;
+  border-bottom-width: 1px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #a6a6a666;
+}
+.mt-43 {
+  margin-top: 43px;
+}
+.price {
+  display: flex;
+  justify-content: flex-start;
+  font-size: 32px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  font-family: Arial, sans-serif;
+}
+.price-number {
+  font-family: "Inter";
+  font-weight: 600;
+  font-size: 42px;
+  line-height: 50.4px;
+  width: 133px;
+  color: black;
+}
+.price-number-two {
+  font-family: "Inter";
+  font-weight: 600;
+  font-size: 42px;
+  line-height: 50.4px;
+  width: 77px;
+  color: black;
+}
+.currency-two {
+  padding-left: 8px;
+  font-family: Inter;
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 38.4px;
+  color: #168acd;
+  font-weight: bold;
+  margin-left: -4px;
+  margin-top: 1px;
+}
+.pr-2 {
+  padding-right: 2px;
+}
+.divider {
+  width: 2px;
+  height: 42.7px;
+  background: #161616;
+  margin-left: -1px;
+  margin-right: 10px;
+}
+.currency {
+  font-family: Inter;
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 38.4px;
+  color: #168acd;
+  font-weight: bold;
+  margin-left: -4px;
+  margin-top: 1px;
+}
+.progress-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.progress-bar-stat {
+  width: 100%;
+  height: auto;
+  text-align: center;
+  padding-top: 5px;
+  padding-bottom: 4px;
+  gap: 16px;
+  border-width: 1px;
+  border-radius: 10px;
+  border: 1px solid #a6a6a666;
+}
+.progress-bar-label {
+  gap: 4px;
+  font-family: Inter;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 14.4px;
+  color: #7a7a7a;
+}
+.progress-bar {
+  position: relative;
+  border: 1px solid #a6a6a666;
+  border-radius: 10px;
+  width: 100%;
+  min-width: 89.25px;
+  height: 24px;
+  line-height: 22px;
+  vertical-align: middle;
+  overflow: hidden;
+  font-family: Inter;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 14.4px;
+}
+.progress-bar .bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.progress-bar .bar span {
+  position: absolute;
+  display: block;
+  width: 100%;
+  min-width: 89.25px;
+  height: 100%;
+  text-align: center;
+}
+.progress-bar .bar.positive {
+  background: #168acd;
+  left: 0;
+  animation: animate-positive 2s;
+}
+.progress-bar .bar.positive span {
+  top: 5px;
+  left: 2px;
+  gap: 4px;
+  color: #fff;
+}
+.progress-bar .bar.negative {
+  background: #fff;
+  right: 0;
+  animation: animate-negative 2s;
+}
+.progress-bar .bar.negative span {
+  top: 5px;
+  right: 0;
+  gap: 4px;
+  color: #7a7a7a;
+}
+
+@media (min-width: 425px) {
+  .progress-bars {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+@media (min-width: 1200px) {
+  .container {
+    flex-direction: row;
+  }
+  .ml-5 {
+    margin-left: 5px;
+  }
+  .mr-5 {
+    margin-right: 5px;
+  }
+  .progress-bars {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .mt-43 {
+    margin-top: 0;
+  }
+}
+
+@-webkit-keyframes animate-positive {
+  0% {
+    width: 0%;
+  }
+}
+@keyframes animate-positive {
+  0% {
+    width: 0%;
+  }
+}
+@-webkit-keyframes animate-negative {
+  0% {
+    width: 100%;
+  }
+}
+@keyframes animate-negative {
+  0% {
+    width: 100%;
+  }
+}
