@@ -5,76 +5,100 @@ import "./style.css";
 import Decimal from "decimal.js";
 
 const App: React.FC = () => {
-  // Параметры для левого input (RUB)
   const leftInputMin = new Decimal(10000);
   const leftInputMax = new Decimal(70000000);
   const leftInputStep = new Decimal(100);
-
-  // Параметры для правого input (USDT)
   const rightInputStep = new Decimal(0.000001);
 
-  // Состояния для левого input
   const [leftInputValue, setLeftInputValue] = useState<Decimal>(leftInputMin);
   const [leftInputRawValue, setLeftInputRawValue] = useState<string>(
     leftInputMin.toString()
   );
-
-  // Состояния для правого input
   const [rightInputValue, setRightInputValue] = useState<Decimal>(
     new Decimal(0)
   );
   const [rightInputRawValue, setRightInputRawValue] = useState<string>("0");
-
-  // Состояние для цены из API (моковые данные)
-  const [price, setPrice] = useState<Decimal>(new Decimal(0));
-
-  // Состояние для отслеживания активного инпута
+  const [priceData, setPriceData] = useState<{
+    price: Decimal;
+    reversePrice: Decimal;
+  } | null>(null);
   const [activeInput, setActiveInput] = useState<"left" | "right">("left");
-
-  // Состояние для отслеживания завершения фильтрации
   const [isLeftInputFiltered, setIsLeftInputFiltered] =
     useState<boolean>(false);
+  const [exchangeRate, setExchangeRate] = useState<string>("");
 
-  // Таймеры для задержки конвертации
   const leftInputTimerRef = useRef<NodeJS.Timeout | null>(null);
   const rightInputTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Реф для таймера кнопок процентов
   const percentageTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const apiCallTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Моковая функция для запроса к API
-  const fetchConversion = useCallback(async () => {
-    try {
-      // Имитация задержки запроса
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+  // Объявляем fetchConversion до её использования
+  const fetchConversion = useCallback(
+    async (inAmount: Decimal | null, outAmount: Decimal | null) => {
+      try {
+        const response = await fetch(
+          "https://awx.pro/b2api/change/user/pair/calc",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              serial: "a7307e89-fbeb-4b28-a8ce-55b7fb3c32aa",
+            },
+            body: JSON.stringify({
+              pairId: 133,
+              inAmount: inAmount?.toNumber() || null,
+              outAmount: outAmount?.toNumber() || null,
+              timestamp: Date.now(), // Уникальный параметр для избежания кэширования
+            }),
+          }
+        );
 
-      // Моковые данные
-      const mockData = {
-        price: "96.47", // Прямая цена
-      };
+        if (!response.ok) throw new Error("Network response was not ok");
 
-      // Обновляем цену
-      const priceDecimal = new Decimal(mockData.price);
-      setPrice(priceDecimal);
+        const data = await response.json();
+        console.log("API Response:", data); // Лог для отладки
 
-      return priceDecimal;
-    } catch (error) {
-      console.error("Ошибка при запросе к API:", error);
-      return null;
-    }
-  }, []);
+        const priceDecimal = new Decimal(data.price[1]); // Прямая цена (RUB/USDT)
+        const reversePriceDecimal = new Decimal(data.price[0]); // Обратная цена (USDT/RUB)
+        setPriceData({
+          price: priceDecimal,
+          reversePrice: reversePriceDecimal,
+        });
 
-  // Функция для округления до ближайшего шага (step)
+        // Обновляем курс для отображения
+        setExchangeRate(`1 USDT = ${priceDecimal.toFixed(2)} RUB`);
+
+        return { price: priceDecimal, reversePrice: reversePriceDecimal };
+      } catch (error) {
+        console.error("Ошибка при запросе к API:", error);
+        return null;
+      }
+    },
+    []
+  );
+
+  // Используем fetchConversion после её объявления
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log("Fetching conversion data..."); // Лог для отладки
+      if (activeInput === "left") {
+        fetchConversion(leftInputValue, null);
+      } else {
+        fetchConversion(null, rightInputValue);
+      }
+    }, 1200);
+
+    return () => clearInterval(interval);
+  }, [activeInput, leftInputValue, rightInputValue, fetchConversion]);
+
   const roundToStep = (value: Decimal, step: Decimal): Decimal => {
     return value.div(step).round().mul(step);
   };
 
-  // Обработчик изменения значения в левом input
   const handleLeftInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
-    setLeftInputRawValue(rawValue); // Сохраняем сырое значение для отображения
+    setLeftInputRawValue(rawValue);
 
-    // Если поле пустое, устанавливаем минимальное значение (leftInputMin)
     if (rawValue === "") {
       setLeftInputValue(leftInputMin);
       setLeftInputRawValue(leftInputMin.toString());
@@ -83,57 +107,49 @@ const App: React.FC = () => {
 
     const numericValue = new Decimal(rawValue);
 
-    // Если значение некорректное (NaN), устанавливаем min
     if (numericValue.isNaN()) {
       setLeftInputValue(leftInputMin);
       setLeftInputRawValue(leftInputMin.toString());
       return;
     }
 
-    // Сохраняем значение без валидации и округления
     setLeftInputValue(numericValue);
-    setActiveInput("left"); // Устанавливаем активный инпут как левый
-    setIsLeftInputFiltered(false); // Сбрасываем флаг фильтрации
+    setActiveInput("left");
+    setIsLeftInputFiltered(false);
   };
 
-  // Эффект для валидации и округления значения левого инпута через 1 секунду после завершения ввода
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       let validatedValue = leftInputValue;
 
-      // Если значение меньше min или больше max, устанавливаем min
-      validatedValue.lessThan(leftInputMin) && (validatedValue = leftInputMin);
-      validatedValue.greaterThan(leftInputMax) &&
-        (validatedValue = leftInputMin);
+      if (validatedValue.lessThan(leftInputMin)) validatedValue = leftInputMin;
+      if (validatedValue.greaterThan(leftInputMax))
+        validatedValue = leftInputMin;
 
-      // Округляем значение до ближайшего шага только если активный инпут — левый
       if (activeInput === "left") {
         const roundedValue = roundToStep(validatedValue, leftInputStep);
         setLeftInputValue(roundedValue);
         setLeftInputRawValue(roundedValue.toString());
-        setIsLeftInputFiltered(true); // Устанавливаем флаг завершения фильтрации
+        setIsLeftInputFiltered(true);
       }
     }, 1000);
 
-    return () => clearTimeout(timeoutId); // Очищаем таймер при изменении leftInputValue
+    return () => clearTimeout(timeoutId);
   }, [leftInputValue, leftInputMin, leftInputMax, leftInputStep, activeInput]);
 
-  // Эффект для конвертации после завершения фильтрации
   useEffect(() => {
-    if (isLeftInputFiltered && price.greaterThan(0)) {
-      const convertedValue = leftInputValue.div(price); // Конвертируем RUB в USDT
+    if (isLeftInputFiltered && priceData?.price.greaterThan(0)) {
+      const convertedValue = leftInputValue.div(priceData.price);
       setRightInputValue(convertedValue);
       setRightInputRawValue(convertedValue.toFixed(6));
-      setIsLeftInputFiltered(false); // Сбрасываем флаг фильтрации
+      setIsLeftInputFiltered(false);
     }
-  }, [isLeftInputFiltered, leftInputValue, price]);
+  }, [isLeftInputFiltered, leftInputValue, priceData]);
 
-  // Обработчик изменения значения в правом input
   const handleRightInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
-    setRightInputRawValue(rawValue); // Сохраняем сырое значение для отображения
+    setRightInputRawValue(rawValue);
 
-    // Если поле пустое, устанавливаем минимальное значение (0)
     if (rawValue === "") {
       setRightInputValue(new Decimal(0));
       setRightInputRawValue("0");
@@ -142,36 +158,30 @@ const App: React.FC = () => {
 
     const numericValue = new Decimal(rawValue);
 
-    // Если значение некорректное (NaN), устанавливаем 0
     if (numericValue.isNaN()) {
       setRightInputValue(new Decimal(0));
       setRightInputRawValue("0");
       return;
     }
 
-    // Сохраняем значение без валидации и округления
     setRightInputValue(numericValue);
-    setActiveInput("right"); // Устанавливаем активный инпут как правый
+    setActiveInput("right");
 
-    // Запускаем таймер для конвертации через 1200 мс
     if (rightInputTimerRef.current) {
       clearTimeout(rightInputTimerRef.current);
     }
     rightInputTimerRef.current = setTimeout(() => {
-      if (price.greaterThan(0)) {
-        const convertedValue = numericValue.mul(price); // Конвертируем USDT в RUB
+      if (priceData?.price.greaterThan(0)) {
+        const convertedValue = numericValue.mul(priceData.price);
 
-        // Если значение меньше leftInputMin, устанавливаем leftInputMin
         if (convertedValue.lessThan(leftInputMin)) {
           setLeftInputValue(leftInputMin);
           setLeftInputRawValue(leftInputMin.toString());
 
-          // Проводим прямую конвертацию из leftInputMin в правый инпут
-          const newRightValue = leftInputMin.div(price);
+          const newRightValue = leftInputMin.div(priceData.price);
           setRightInputValue(newRightValue);
           setRightInputRawValue(newRightValue.toFixed(6));
         } else {
-          // Валидация по min и max, но без округления до шага
           const validatedValue = convertedValue.greaterThan(leftInputMax)
             ? leftInputMax
             : convertedValue.lessThan(leftInputMin)
@@ -185,31 +195,25 @@ const App: React.FC = () => {
     }, 1200);
   };
 
-  // Эффект для валидации и округления значения правого инпута через 1 секунду после завершения ввода
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       let validatedValue = rightInputValue;
 
-      // Если значение меньше 0, устанавливаем 0
-      validatedValue.lessThan(0) && (validatedValue = new Decimal(0));
+      if (validatedValue.lessThan(0)) validatedValue = new Decimal(0);
 
-      // Округляем значение до ближайшего шага
       const roundedValue = roundToStep(validatedValue, rightInputStep);
 
-      // Обновляем состояние
       setRightInputValue(roundedValue);
       setRightInputRawValue(roundedValue.toString());
     }, 1000);
 
-    return () => clearTimeout(timeoutId); // Очищаем таймер при изменении rightInputValue
+    return () => clearTimeout(timeoutId);
   }, [rightInputValue, rightInputStep]);
 
-  // Эффект для получения данных из API при монтировании компонента
   useEffect(() => {
-    fetchConversion();
-  }, [fetchConversion]);
+    fetchConversion(leftInputValue, null);
+  }, [fetchConversion, leftInputValue]);
 
-  // Обработчик клика по кнопкам "25%", "50%", "75%", "100%" для левого инпута
   const handleLeftPercentageClick = (percentage: number) => {
     if (percentageTimerRef.current) {
       clearTimeout(percentageTimerRef.current);
@@ -224,7 +228,6 @@ const App: React.FC = () => {
     }, 1200);
   };
 
-  // Обработчик клика по кнопкам "25%", "50%", "75%", "100%" для правого инпута
   const handleRightPercentageClick = (percentage: number) => {
     if (percentageTimerRef.current) {
       clearTimeout(percentageTimerRef.current);
@@ -239,14 +242,12 @@ const App: React.FC = () => {
     }, 1200);
   };
 
-  // Прогресс бар
   const progress = leftInputValue
     .minus(leftInputMin)
     .div(leftInputMax.minus(leftInputMin))
     .mul(100)
     .toNumber();
 
-  // Очистка таймеров при размонтировании
   useEffect(() => {
     return () => {
       if (percentageTimerRef.current) {
@@ -258,13 +259,15 @@ const App: React.FC = () => {
       if (rightInputTimerRef.current) {
         clearTimeout(rightInputTimerRef.current);
       }
+      if (apiCallTimerRef.current) {
+        clearTimeout(apiCallTimerRef.current);
+      }
     };
   }, []);
 
   return (
     <div className="container">
       <div className="contain mr-5">
-        {/* Левый input (RUB) */}
         <PriceInput
           placeholder={leftInputMin.toString()}
           currency="RUB"
@@ -275,9 +278,8 @@ const App: React.FC = () => {
           step={leftInputStep.toNumber()}
         />
         <div className="progress-bars">
-          {/* Прогресс-бар как первая кнопка "25%" */}
           <div
-            style={{ width: "100%" }} // Убедимся, что контейнер занимает всю ширину
+            style={{ width: "100%" }}
             onClick={() => handleLeftPercentageClick(25)}
           >
             <ProgressBar
@@ -285,7 +287,6 @@ const App: React.FC = () => {
               negativeProgress={100 - progress}
             />
           </div>
-          {/* Остальные кнопки */}
           <div
             className="progress-bar-stat"
             onClick={() => handleLeftPercentageClick(50)}
@@ -308,7 +309,6 @@ const App: React.FC = () => {
       </div>
 
       <div className="contain ml-5 mt-43">
-        {/* Правый input (USDT) */}
         <PriceInput
           placeholder="0.000000"
           currency="USDT"
@@ -317,9 +317,8 @@ const App: React.FC = () => {
           step={rightInputStep.toNumber()}
         />
         <div className="progress-bars">
-          {/* Прогресс-бар как первая кнопка "25%" */}
           <div
-            style={{ width: "100%" }} // Убедимся, что контейнер занимает всю ширину
+            style={{ width: "100%" }}
             onClick={() => handleRightPercentageClick(25)}
           >
             <ProgressBar
@@ -327,7 +326,6 @@ const App: React.FC = () => {
               negativeProgress={100 - progress}
             />
           </div>
-          {/* Остальные кнопки */}
           <div
             className="progress-bar-stat"
             onClick={() => handleRightPercentageClick(50)}
