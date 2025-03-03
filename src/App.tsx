@@ -36,22 +36,19 @@ const App: React.FC = () => {
   const fetchConversion = useCallback(
     async (inAmount: Decimal | null, outAmount: Decimal | null) => {
       try {
-        const response = await fetch(
-          "https://awx.pro/b2api/change/user/pair/calc",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              serial: "a7307e89-fbeb-4b28-a8ce-55b7fb3c32aa",
-            },
-            body: JSON.stringify({
-              pairId: 133,
-              inAmount: inAmount?.toNumber() || null,
-              outAmount: outAmount?.toNumber() || null,
-              timestamp: Date.now(), // Уникальный параметр для избежания кэширования
-            }),
-          }
-        );
+        const response = await fetch("/b2api/change/user/pair/calc", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            serial: "a7307e89-fbeb-4b28-a8ce-55b7fb3c32aa",
+          },
+          body: JSON.stringify({
+            pairId: 133,
+            inAmount: inAmount?.toNumber() || null,
+            outAmount: outAmount?.toNumber() || null,
+            timestamp: Date.now(), // Уникальный параметр для избежания кэширования
+          }),
+        });
 
         if (!response.ok) throw new Error("Network response was not ok");
 
